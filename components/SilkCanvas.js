@@ -250,7 +250,12 @@ export default function SilkCanvas({ texture, progress }) {
       holder.rotation.z = -0.22 * (1 - s);
       holder.position.y = mobile ? 1.6 * (1 - s) : 0;
       holder.position.x = mobile ? 0 : 2.6 * (1 - s);
-      holder.scale.setScalar(mobile ? 1 : 1 - s * 0.14); // the whole length fits inside the frame when centred
+      // by the end of the scroll the drape spans the full width of the screen, edge to edge
+      const viewW = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
+      const fullScale = (viewW * 1.06) / W;
+      // stretch the length to the screen width, but keep the height modest so nothing is cut off
+      if (mobile) holder.scale.setScalar(1);
+      else holder.scale.set(1 + (fullScale - 1) * s, 1 + (Math.min(fullScale, 1.15) - 1) * s, 1);
       if (map.repeat.x > 1) map.offset.x = t * 0.012; // the tiling weave slowly travels along the drape
 
       const dt = Math.min(0.05, (now - last) / 1000);
