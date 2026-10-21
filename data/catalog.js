@@ -38,9 +38,14 @@ export const weaves = [
 export const silkRoom = [
   { id: "sindoor", name: "Sindoor Red Banarasi", tex: asset("/hanging/sindoor.webp") },
   { id: "teal", name: "Peacock Teal Kanjivaram", tex: asset("/hanging/teal.webp") },
+  { id: "rani", name: "Rani Pink Silk", tex: asset("/hanging/rani.webp") },
   { id: "purple", name: "Royal Purple Kanjivaram", tex: asset("/hanging/purple.webp") },
+  { id: "noir", name: "Noir Zari Silk", tex: asset("/hanging/noir.webp") },
   { id: "golden", name: "Golden Hour Kanjivaram", tex: asset("/hanging/golden.webp") },
+  { id: "indigo", name: "Indigo Gold-Border Silk", tex: asset("/hanging/indigo.webp") },
   { id: "plum", name: "Midnight Plum Paithani", tex: asset("/hanging/plum.webp") },
+  { id: "monsoon", name: "Monsoon Organza", tex: asset("/hanging/monsoon.webp") },
+  { id: "blush", name: "Blush Pink Soft Silk", tex: asset("/hanging/blush.webp") },
 ];
 
 export const imageCredits = [

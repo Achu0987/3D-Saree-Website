@@ -148,9 +148,10 @@ export default function SilkCanvas({ texture, progress }) {
     {
       const g = fade.getContext("2d");
       const gr = g.createLinearGradient(0, 0, 512, 0);
+      // only a whisper of fade at the very ends, so the whole saree reads clearly
       gr.addColorStop(0, "#000");
-      gr.addColorStop(0.1, "#fff");
-      gr.addColorStop(0.86, "#fff");
+      gr.addColorStop(0.03, "#fff");
+      gr.addColorStop(0.97, "#fff");
       gr.addColorStop(1, "#000");
       g.fillStyle = gr;
       g.fillRect(0, 0, 512, 4);
@@ -232,7 +233,7 @@ export default function SilkCanvas({ texture, progress }) {
         const fall = Math.sin(u * Math.PI * 1.15 + 0.4) * 0.55 - u * 0.5;
         let yy = y + fall + Math.sin(x * 0.8 + t * 0.7) * 0.12 * free;
         // scroll: the drape twists along its length and lifts away
-        const tw = u * s * Math.PI * 0.9;
+        const tw = u * s * Math.PI * 0.45; // a gentle half-turn, so the drape never pinches to a line
         const cy = yy * Math.cos(tw) - z * Math.sin(tw);
         const cz = yy * Math.sin(tw) + z * Math.cos(tw);
         // intro: unrolls from a narrow fold
@@ -249,7 +250,7 @@ export default function SilkCanvas({ texture, progress }) {
       holder.rotation.z = -0.22 * (1 - s);
       holder.position.y = mobile ? 1.6 * (1 - s) : 0;
       holder.position.x = mobile ? 0 : 2.6 * (1 - s);
-      holder.scale.setScalar(mobile ? 1 : 1 - s * 0.08); // stays inside the frame when centred
+      holder.scale.setScalar(mobile ? 1 : 1 - s * 0.14); // the whole length fits inside the frame when centred
       if (map.repeat.x > 1) map.offset.x = t * 0.012; // the tiling weave slowly travels along the drape
 
       const dt = Math.min(0.05, (now - last) / 1000);

@@ -121,7 +121,9 @@ export default function HangingSilk({ fabrics, progress, onFocus }) {
 
       // camera glides along the row; starts with the first fabric right of the heading
       const startX = mobile ? 0 : -2.6;
-      const camX = startX + p * ((fabrics.length - 1) * GAP - startX);
+      // stop where the last saree sits near the right edge, so the row runs to the end of the frame
+      const endX = (fabrics.length - 1) * GAP - (mobile ? 0 : camera.aspect * 2);
+      const camX = startX + p * (endX - startX);
       camera.position.set(camX, 0.2, mobile ? 12 : 10.5);
       camera.lookAt(camX, 0.05, 0);
 
@@ -146,12 +148,12 @@ export default function HangingSilk({ fabrics, progress, onFocus }) {
         pos.needsUpdate = true;
         s.mesh.geometry.computeVertexNormals();
         // nearest to centre comes slightly forward
-        const d = Math.abs(i * GAP - camX);
-        const near = Math.max(0, 1 - d / GAP);
+        const near = i === focus ? 1 : 0;
         s.mesh.position.z += (near * 0.6 - s.mesh.position.z) * 0.08;
       });
 
-      const nearest = Math.max(0, Math.min(fabrics.length - 1, Math.round(camX / GAP)));
+      // the name shown follows scroll progress, so it reaches the last saree at the end
+      const nearest = Math.max(0, Math.min(fabrics.length - 1, Math.round(p * (fabrics.length - 1))));
       if (nearest !== focus) {
         focus = nearest;
         focusRef.current?.(nearest);

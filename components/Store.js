@@ -4,11 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Lenis from "lenis";
 import SilkCanvas from "./SilkCanvas";
 import HangingSilk from "./HangingSilk";
+import DrapeStudio from "./DrapeStudio";
 import { asset, formatPrice, imageCredits, sarees, silkRoom, store, weaves } from "@/data/catalog";
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const FEATURED = "purple";
-const LOOK_MS = 3800; // auto-play speed in the drape studio
 const MARQUEE = ["Kanjivaram", "Banarasi", "Paithani", "Tissue silk", "Organza", "Jamdani", "Soft silk", "Pure zari"];
 
 function useBag() {
@@ -59,7 +59,7 @@ export default function Store() {
   const ringRef = useRef(null);
   const ringSecRef = useRef(null);
   const roomRef = useRef(null);
-  const studioRef = useRef(null);
+  const studioApi = useRef(null);
   const lenisRef = useRef(null);
   const { bag, add, setQty } = useBag();
   const [bagOpen, setBagOpen] = useState(false);
@@ -69,12 +69,6 @@ export default function Store() {
   const [navHidden, setNavHidden] = useState(false);
   const [navSolid, setNavSolid] = useState(false);
 
-  // drape studio
-  const [look, setLook] = useState(0);
-  const [prevLook, setPrevLook] = useState(-1);
-  const [autoPlay, setAutoPlay] = useState(true);
-  const [studioInView, setStudioInView] = useState(false);
-  const resumeTimer = useRef(null);
 
   // silk room
   const [roomFocus, setRoomFocus] = useState(0);
@@ -94,34 +88,10 @@ export default function Store() {
     lenisRef.current ? lenisRef.current.scrollTo(el, { duration: 1.6 }) : el.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const showLook = useCallback((i) => {
-    setLook((cur) => {
-      if (cur !== i) setPrevLook(cur);
-      return i;
-    });
-  }, []);
-
-  // picking a saree pauses auto-play for a while, then it carries on by itself
-  const pickLook = (i) => {
-    showLook(i);
-    setAutoPlay(false);
-    clearTimeout(resumeTimer.current);
-    resumeTimer.current = setTimeout(() => setAutoPlay(true), 12000);
-  };
-
   const seeOnModel = (id) => {
-    pickLook(sarees.findIndex((s) => s.id === id));
+    studioApi.current?.choose(id);
     goTo("#studio");
   };
-
-  // auto-play the looks while the studio is on screen
-  useEffect(() => {
-    if (!autoPlay || !studioInView) return;
-    const t = setTimeout(() => showLook((look + 1) % sarees.length), LOOK_MS);
-    return () => clearTimeout(t);
-  }, [autoPlay, studioInView, look, showLook]);
-
-  useEffect(() => () => clearTimeout(resumeTimer.current), []);
 
   // ---------- scroll: smooth scrolling, hero progress, 3D ring, silk room, nav, parallax ----------
   useEffect(() => {
@@ -189,19 +159,15 @@ export default function Store() {
     });
     document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
 
-    const studioIO = new IntersectionObserver(([e]) => setStudioInView(e.isIntersecting), { threshold: 0.35 });
-    studioIO.observe(studioRef.current);
 
     return () => {
       cancelAnimationFrame(raf);
       io.disconnect();
-      studioIO.disconnect();
       lenis?.destroy();
     };
   }, []);
 
   const featured = sarees.find((s) => s.id === FEATURED);
-  const current = sarees[look];
 
   return (
     <div className="store">
@@ -328,62 +294,8 @@ export default function Store() {
 
       <Ornament />
 
-      {/* ===== drape studio: the same model in every saree ===== */}
-      <section className="studio" id="studio" ref={studioRef}>
-        <div className="studio__copy">
-          <p className="eyebrow reveal">Drape studio</p>
-          <Split lines={["Pick a saree.", <em key="e">See it draped.</em>]} />
-          <p className="studio__lead reveal">Every weave, worn by our model in the same light, so you can compare true colour, border and fall. It plays by itself; tap any saree to take over.</p>
-
-          <div className="studio__rail reveal">
-            {sarees.map((s, i) => (
-              <button key={s.id} type="button" className={`chip${look === i ? " is-on" : ""}`} onClick={() => pickLook(i)} title={s.name}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={asset(`/sarees/${s.id}.webp`)} alt="" loading="lazy" />
-                <span>{s.name}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="studio__controls reveal">
-            <button type="button" className="studio__play" onClick={() => setAutoPlay((a) => !a)}>
-              {autoPlay ? "❚❚ Pause" : "▶ Play"}
-            </button>
-            <span className="studio__timer">
-              <i key={`${look}-${autoPlay}-${studioInView}`} className={autoPlay && studioInView ? "is-running" : ""} style={{ "--ms": `${LOOK_MS}ms` }} />
-            </span>
-            <span className="studio__count">
-              {String(look + 1).padStart(2, "0")} / {sarees.length}
-            </span>
-          </div>
-        </div>
-
-        <div className="studio__stage reveal">
-          <div className="studio__frame">
-            {sarees.map((s, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={s.id}
-                src={asset(`/model/${s.id}.webp`)}
-                alt={i === look ? `Our model wearing the ${s.name}` : ""}
-                loading={i < 2 ? "eager" : "lazy"}
-                className={`look${i === look ? " is-on" : ""}${i === prevLook ? " is-prev" : ""}`}
-              />
-            ))}
-            <span key={look} className="studio__sheen" aria-hidden />
-          </div>
-          <div key={current.id} className="studio__card">
-            <span className="studio__weave">
-              {current.weave} · {current.region}
-            </span>
-            <b>{current.name}</b>
-            <div className="studio__buy">
-              <span>{formatPrice(current.price)}</span>
-              <button type="button" className="btn btn--dark btn--sm" onClick={() => addToBag(current.id)}>Add to bag</button>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ===== drape studio: our model in every saree ===== */}
+      <DrapeStudio ref={studioApi} onAdd={addToBag} />
 
       <Ornament />
 

@@ -142,10 +142,12 @@ em { font-style: italic; color: var(--maroon); }
 
 /* ===== 3D ring collection ===== */
 .ring-sec { position: relative; height: 460vh; background: var(--paper); --rp: 0; }
-.ring-sec__sticky { position: sticky; top: 0; height: 100vh; overflow: hidden; display: grid; grid-template-rows: auto 1fr auto; padding: 120px 5vw 5vh; }
+.ring-sec__sticky { position: sticky; top: 0; height: 100vh; overflow: hidden; display: grid; grid-template-rows: auto 1fr auto; padding: 78px 5vw 3.5vh; }
 .ring-sec__head { text-align: center; }
-.ring-stage { perspective: 1900px; perspective-origin: 50% 40%; display: grid; place-items: center; }
-.ring { position: relative; width: 290px; height: 460px; transform-style: preserve-3d; will-change: transform; }
+.ring-sec__head .eyebrow { margin-bottom: 10px; }
+.ring-sec__head .h2 { font-size: clamp(38px, 4.2vw, 66px); }
+.ring-stage { perspective: 1900px; perspective-origin: 50% 40%; display: grid; place-items: center; min-height: 0; }
+.ring { position: relative; width: 268px; height: min(420px, 52vh); transform-style: preserve-3d; will-change: transform; }
 .ring__card {
   position: absolute;
   inset: 0;
@@ -171,25 +173,39 @@ em { font-style: italic; color: var(--maroon); }
 .ring-sec__bar { flex: 1; height: 1px; background: var(--line); }
 .ring-sec__bar i { display: block; height: 100%; background: var(--maroon); transform: scaleX(var(--rp)); transform-origin: left; }
 
-/* ===== drape studio ===== */
-.studio { display: grid; grid-template-columns: 1fr 1.05fr; gap: 6vw; align-items: center; padding: calc(var(--space) * 0.4) 5vw calc(var(--space) * 0.6); }
-.studio__lead { margin: 26px 0 34px; max-width: 460px; font-size: 16px; line-height: 1.75; color: var(--muted); }
-.studio__rail { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 360px; overflow: auto; padding: 4px 8px 4px 2px; scrollbar-width: thin; }
-.chip { display: flex; align-items: center; gap: 12px; padding: 6px 12px 6px 6px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.55); text-align: left; font-size: 13px; font-weight: 600; transition: border-color 0.3s, background 0.3s, transform 0.3s var(--ease), box-shadow 0.3s; }
-.chip img { width: 40px; height: 50px; object-fit: cover; border-radius: 9px; }
-.chip:hover { transform: translateX(4px); border-color: rgba(110, 20, 36, 0.35); }
-.chip.is-on { border-color: var(--maroon); background: #fff; box-shadow: 0 10px 24px rgba(110, 20, 36, 0.12); color: var(--maroon); }
-.studio__controls { display: flex; align-items: center; gap: 18px; margin-top: 26px; }
-.studio__play { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; padding: 10px 16px; border: 1px solid var(--line); border-radius: 999px; transition: border-color 0.3s; }
-.studio__play:hover { border-color: var(--maroon); }
-.studio__timer { flex: 1; height: 2px; border-radius: 2px; background: var(--line); overflow: hidden; }
-.studio__timer i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--maroon)); transform: scaleX(0); transform-origin: left; }
-.studio__timer i.is-running { animation: timer var(--ms) linear forwards; }
-@keyframes timer { to { transform: scaleX(1); } }
-.studio__count { font-family: var(--font-serif), serif; font-size: 22px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* ===== drape stage ===== */
+@property --tint { syntax: "<color>"; inherits: true; initial-value: #c8161d; }
+@property --accent { syntax: "<color>"; inherits: true; initial-value: #d4a64a; }
+.dstage { position: relative; display: grid; grid-template-columns: 1fr auto 120px; gap: 5vw; align-items: center; min-height: 100vh; padding: calc(var(--space) * 0.45) 5vw; overflow: hidden; transition: --tint 1.2s var(--ease), --accent 1.2s var(--ease); }
+/* the room quietly takes on the colour of the saree being shown */
+.dstage__tint { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(60% 70% at 58% 50%, color-mix(in srgb, var(--tint) 22%, transparent), transparent 70%), radial-gradient(40% 40% at 85% 85%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%); }
+.dstage__word { position: absolute; left: 50%; top: 50%; z-index: 0; translate: -50% -50%; font-family: var(--font-serif), serif; font-style: italic; font-size: clamp(120px, 19vw, 320px); line-height: 1; white-space: nowrap; color: transparent; -webkit-text-stroke: 1px color-mix(in srgb, var(--accent) 70%, #a9853f); opacity: 0.55; pointer-events: none; animation: wordIn 1.4s var(--ease) both; }
+@keyframes wordIn { from { opacity: 0; translate: -50% -40%; letter-spacing: 0.08em; } }
 
-.studio__stage { position: relative; }
-.studio__frame { position: relative; aspect-ratio: 2 / 3; max-height: 82vh; margin-left: auto; border-radius: 26px; overflow: hidden; background: #efe4d4; box-shadow: 0 50px 90px rgba(42, 28, 23, 0.18); }
+.dstage__info { position: relative; z-index: 2; max-width: 440px; }
+.dstage__title { font-family: var(--font-serif), serif; font-weight: 500; font-size: clamp(40px, 4.4vw, 70px); line-height: 1.02; }
+.dstage__detail { margin-top: 38px; padding-top: 26px; border-top: 1px solid var(--line); }
+.dstage__detail > * { animation: rise 0.9s var(--ease) both; }
+.dstage__detail > :nth-child(2) { animation-delay: 0.08s; }
+.dstage__detail > :nth-child(3) { animation-delay: 0.16s; }
+.dstage__detail > :nth-child(4) { animation-delay: 0.24s; }
+.dstage__weave { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold); }
+.dstage__name { display: block; margin: 10px 0 10px; font-family: var(--font-serif), serif; font-weight: 500; font-size: clamp(32px, 3vw, 46px); line-height: 1.05; color: color-mix(in srgb, var(--tint) 55%, var(--ink)); }
+.dstage__note { font-family: var(--font-serif), serif; font-style: italic; font-size: 20px; color: var(--muted); }
+.dstage__buy { display: flex; align-items: center; gap: 22px; margin-top: 28px; }
+.dstage__price { font-family: var(--font-serif), serif; font-size: 36px; }
+.dstage__nav { display: flex; align-items: center; gap: 16px; margin-top: 36px; }
+.dstage__nav button { width: 46px; height: 46px; border-radius: 50%; border: 1px solid rgba(42, 28, 23, 0.25); font-size: 18px; transition: background 0.3s, color 0.3s, transform 0.3s var(--ease); }
+.dstage__nav button:hover { background: var(--maroon); color: var(--paper); border-color: var(--maroon); transform: scale(1.06); }
+.dstage__nav span { font-family: var(--font-serif), serif; font-size: 24px; font-variant-numeric: tabular-nums; }
+.dstage__nav span i { font-size: 16px; color: var(--muted); }
+.dstage__nav .dstage__play { width: auto; height: 40px; padding: 0 18px; margin-left: 8px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
+
+/* the model stands in a temple arch with a gold outline */
+.dstage__arch { position: relative; z-index: 1; width: min(440px, 34vw); }
+.dstage__arch::before { content: ""; position: absolute; inset: -14px; border: 1px solid color-mix(in srgb, var(--accent) 70%, #a9853f); border-radius: 999px 999px 28px 28px; pointer-events: none; }
+.dstage__frame { position: relative; aspect-ratio: 2 / 3; max-height: 80vh; border-radius: 999px 999px 22px 22px; overflow: hidden; background: #efe4d4; box-shadow: 0 50px 90px rgba(42, 28, 23, 0.2); }
+.dstage__plinth { display: block; width: 80%; height: 22px; margin: 18px auto 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(42, 28, 23, 0.22), transparent); }
 .look { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; clip-path: inset(0 0 100% 0); }
 .look.is-prev { opacity: 1; clip-path: inset(0); z-index: 1; }
 /* the new saree "falls" into place from the top, like fabric being draped */
@@ -200,15 +216,23 @@ em { font-style: italic; color: var(--maroon); }
 }
 .studio__sheen { position: absolute; left: 0; right: 0; top: -20%; height: 20%; z-index: 3; pointer-events: none; background: linear-gradient(180deg, transparent, rgba(255, 236, 196, 0.55), transparent); animation: sheen 1.15s var(--ease) both; }
 @keyframes sheen { from { top: -20%; } to { top: 100%; opacity: 0; } }
-.studio__card { position: absolute; left: -36px; bottom: 34px; z-index: 4; min-width: 280px; padding: 20px 22px; border-radius: 18px; background: rgba(251, 248, 243, 0.86); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.7); box-shadow: 0 24px 50px rgba(42, 28, 23, 0.16); animation: cardIn 0.8s var(--ease) 0.25s both; }
-@keyframes cardIn { from { opacity: 0; translate: -20px 10px; } }
-.studio__weave { font-size: 10px; font-weight: 700; letter-spacing: 0.24em; text-transform: uppercase; color: var(--gold); }
-.studio__card b { display: block; margin: 6px 0 14px; font-family: var(--font-serif), serif; font-weight: 500; font-size: 28px; line-height: 1.05; }
-.studio__buy { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
-.studio__buy span { font-family: var(--font-serif), serif; font-size: 26px; }
+
+/* fabric swatches */
+.dstage__swatches { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 10px; max-height: 82vh; overflow-y: auto; padding: 10px 6px; scrollbar-width: none; }
+.dstage__swatches::-webkit-scrollbar { display: none; }
+.swatch { position: relative; flex: none; width: 44px; height: 44px; border-radius: 50%; padding: 0; transition: width 0.4s var(--ease), height 0.4s var(--ease), transform 0.3s var(--ease); }
+.swatch img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: 50% 62%; box-shadow: 0 6px 16px rgba(42, 28, 23, 0.18); }
+.swatch:hover { transform: scale(1.12); }
+.swatch.is-on { width: 64px; height: 64px; }
+.swatch__ring { position: absolute; inset: -6px; width: calc(100% + 12px); height: calc(100% + 12px); rotate: -90deg; }
+.swatch__ring circle { fill: none; stroke: var(--maroon); stroke-width: 1.6; stroke-dasharray: 189; stroke-dashoffset: 0; }
+.swatch__ring circle.is-running { stroke-dashoffset: 189; animation: ring var(--ms) linear forwards; }
+@keyframes ring { from { stroke-dashoffset: 189; } to { stroke-dashoffset: 0; } }
+.swatch__tip { position: absolute; right: calc(100% + 14px); top: 50%; translate: 6px -50%; white-space: nowrap; padding: 7px 12px; border-radius: 999px; background: var(--ink); color: var(--paper); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; opacity: 0; pointer-events: none; transition: opacity 0.25s, translate 0.25s var(--ease); }
+.swatch:hover .swatch__tip { opacity: 1; translate: 0 -50%; }
 
 /* ===== silk room ===== */
-.silkroom { position: relative; height: 340vh; --rp: 0; }
+.silkroom { position: relative; height: 480vh; --rp: 0; }
 .silkroom__sticky { position: sticky; top: 0; height: 100vh; overflow: hidden; background: radial-gradient(80% 70% at 50% 40%, #fffaf2, #f1e6d6 75%, #e9dcc8); }
 .silkroom__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .silkroom__head { position: absolute; left: 5vw; top: 120px; z-index: 2; max-width: 440px; pointer-events: none; opacity: calc(1 - var(--rp) * 2.2); }
@@ -288,11 +312,12 @@ em { font-style: italic; color: var(--maroon); }
   .ring { width: 220px; height: 350px; }
   .ring__info h3 { font-size: 21px; }
   .ring-sec__sticky { padding: 90px 18px 3vh; }
-  .studio, .feature, .craft__row { grid-template-columns: 1fr; }
-  .studio__stage { order: -1; }
-  .studio__frame { max-height: 70vh; margin: 0 auto; }
-  .studio__card { left: 12px; right: 12px; bottom: 12px; min-width: 0; }
-  .studio__rail { grid-template-columns: 1fr; max-height: 240px; }
+  .feature, .craft__row { grid-template-columns: 1fr; }
+  .dstage { grid-template-columns: 1fr; justify-items: center; gap: 28px; }
+  .dstage__arch { width: min(320px, 80vw); order: -1; }
+  .dstage__info { max-width: none; width: 100%; }
+  .dstage__swatches { flex-direction: row; max-height: none; max-width: 100%; overflow-x: auto; }
+  .swatch__tip { display: none; }
   .craft__row.is-flip .craft__img { order: 0; }
   .silkroom__head { top: 90px; left: 18px; right: 18px; }
   .foot { grid-template-columns: 1fr; }
