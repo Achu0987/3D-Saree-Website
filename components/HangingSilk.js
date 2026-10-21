@@ -34,9 +34,9 @@ export default function HangingSilk({ fabrics, progress, onFocus }) {
 
     const camera = new THREE.PerspectiveCamera(mobile ? 50 : 34, 1, 0.1, 60);
 
-    const GAP = mobile ? 1.9 : 2.25;
-    const W = 1.35;
+    const GAP = mobile ? 2.2 : 2.7;
     const H = 4.6;
+    const W = H * (9 / 16); // matches the 9:16 hanging-saree photos
     const TOP = 2.3;
     const loader = new THREE.TextureLoader();
     const strips = [];
@@ -57,16 +57,24 @@ export default function HangingSilk({ fabrics, progress, onFocus }) {
     fabrics.forEach((f, i) => {
       const geo = new THREE.PlaneGeometry(W, H, 24, 64);
       geo.translate(0, -H / 2, 0); // pin at the top edge
+      // each fabric is a cut-out photo of a real hanging saree (folds, border and pallu already in it)
       const map = loader.load(f.tex);
       map.colorSpace = THREE.SRGBColorSpace;
       map.anisotropy = renderer.capabilities.getMaxAnisotropy();
-      // the scans are long and landscape with borders top/bottom; turn them so the borders run down the sides
-      map.center.set(0.5, 0.5);
-      map.rotation = Math.PI / 2;
-      map.repeat.set(0.95, 0.62);
       const mesh = new THREE.Mesh(
         geo,
-        new THREE.MeshPhysicalMaterial({ map, side: THREE.DoubleSide, roughness: 0.45, metalness: 0.05, sheen: 0.7, sheenRoughness: 0.4, sheenColor: new THREE.Color("#ecc897") })
+        new THREE.MeshPhysicalMaterial({
+          map,
+          transparent: true,
+          alphaTest: 0.4,
+          side: THREE.DoubleSide,
+          roughness: 0.6,
+          metalness: 0,
+          envMapIntensity: 0.25,
+          sheen: 0.3,
+          sheenRoughness: 0.5,
+          sheenColor: new THREE.Color("#ecc897"),
+        })
       );
       mesh.position.set(i * GAP, TOP, 0);
       scene.add(mesh);
@@ -128,11 +136,12 @@ export default function HangingSilk({ fabrics, progress, onFocus }) {
           const y = s.base[v * 3 + 1];
           const hang = -y / H; // 0 at the rod, 1 at the hem
           const amp = hang * hang;
+          // the photo already has its folds, so the motion is a gentle breeze on top
           const z =
-            Math.sin(y * 1.3 + t * 1.2 + s.phase) * 0.22 * amp +
-            Math.sin(x * 3 + y * 0.8 + t * 1.7 + s.phase) * 0.05 * hang +
-            s.billow * Math.sin(y * 2.2 + t * 3) * 0.35 * amp;
-          pos.setXYZ(v, x + Math.sin(t * 0.8 + s.phase) * 0.08 * amp, y, z);
+            Math.sin(y * 1.1 + t * 1.1 + s.phase) * 0.14 * amp +
+            Math.sin(x * 2.4 + y * 0.6 + t * 1.5 + s.phase) * 0.035 * hang +
+            s.billow * Math.sin(y * 2 + t * 2.6) * 0.28 * amp;
+          pos.setXYZ(v, x + Math.sin(t * 0.7 + s.phase) * 0.06 * amp, y, z);
         }
         pos.needsUpdate = true;
         s.mesh.geometry.computeVertexNormals();

@@ -483,14 +483,14 @@ export default function Store() {
                 {i < sarees.length - 1 ? ", " : ". "}
               </span>
             ))}
-            Textures and craft:{" "}
+            Craft photos:{" "}
             {imageCredits.map((c, i) => (
               <span key={c.url}>
                 <a href={c.url} target="_blank" rel="noreferrer">{c.by}</a>
                 {i < imageCredits.length - 1 ? ", " : ". "}
               </span>
             ))}
-            Model looks and hero fabrics are AI-generated.
+            Model looks, hanging sarees and hero fabrics are AI-generated.
           </p>
         </div>
       </footer>

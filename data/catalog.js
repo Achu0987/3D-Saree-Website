@@ -34,19 +34,16 @@ export const weaves = [
   { id: "green", name: "Parrot Green Kanjivaram", tex: asset("/textures/silk-green.jpg") },
 ];
 
-// The silk room: fabrics hanging in 3D, in walking order
+// The silk room: catalogue sarees hanging open in 3D (AI product shots of each saree), in walking order
 export const silkRoom = [
-  { name: "Red Gold Brocade Silk", tex: asset("/textures/silk-red-gold.jpg") },
-  { name: "Olive Gold Tissue", tex: asset("/textures/silk-olive.jpg") },
-  { name: "Parrot Green Kanjivaram", tex: asset("/textures/silk-green.jpg") },
-  { name: "Ikat Silk", tex: asset("/textures/ikat.jpg") },
-  { name: "Teal Satin Silk", tex: asset("/textures/satin-teal.jpg") },
+  { id: "sindoor", name: "Sindoor Red Banarasi", tex: asset("/hanging/sindoor.webp") },
+  { id: "teal", name: "Peacock Teal Kanjivaram", tex: asset("/hanging/teal.webp") },
+  { id: "purple", name: "Royal Purple Kanjivaram", tex: asset("/hanging/purple.webp") },
+  { id: "golden", name: "Golden Hour Kanjivaram", tex: asset("/hanging/golden.webp") },
+  { id: "plum", name: "Midnight Plum Paithani", tex: asset("/hanging/plum.webp") },
 ];
 
 export const imageCredits = [
-  { what: "Zari silk texture", by: "Souravi Sinha", url: "https://unsplash.com/photos/nSBC88WAklo" },
-  { what: "Teal satin texture", by: "Jatin Gajjar", url: "https://unsplash.com/photos/dQO-3ud96rQ" },
-  { what: "Ikat texture", by: "soumya parthasarathy", url: "https://unsplash.com/photos/eLOLLINm5ZA" },
   { what: "Textiles on hangers", by: "Wolfgang Hasselmann", url: "https://unsplash.com/photos/VdgSIq4khdA" },
   { what: "Zari detail", by: "Jainica Dhingra", url: "https://unsplash.com/photos/udCX1mvNFos" },
   { what: "Silk stack", by: "vinay manda", url: "https://unsplash.com/photos/NQ0dtGvTZEQ" },
