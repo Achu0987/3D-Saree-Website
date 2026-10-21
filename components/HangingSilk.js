@@ -34,9 +34,9 @@ export default function HangingSilk({ fabrics, progress, onFocus }) {
 
     const camera = new THREE.PerspectiveCamera(mobile ? 50 : 34, 1, 0.1, 60);
 
-    const GAP = mobile ? 2.2 : 2.7;
-    const H = 4.6;
-    const W = H * (9 / 16); // matches the 9:16 hanging-saree photos
+    const GAP = mobile ? 3.3 : 3.55; // frame width plus breathing room
+    const H = 3.9;
+    const W = H * 0.75; // matches the 3:4 framed prints
     const TOP = 2.3;
     const loader = new THREE.TextureLoader();
     const strips = [];
@@ -136,14 +136,10 @@ export default function HangingSilk({ fabrics, progress, onFocus }) {
         for (let v = 0; v < pos.count; v++) {
           const x = s.base[v * 3];
           const y = s.base[v * 3 + 1];
-          const hang = -y / H; // 0 at the rod, 1 at the hem
-          const amp = hang * hang;
           // the photo already has its folds, so the motion is a gentle breeze on top
-          const z =
-            Math.sin(y * 1.1 + t * 1.1 + s.phase) * 0.14 * amp +
-            Math.sin(x * 2.4 + y * 0.6 + t * 1.5 + s.phase) * 0.035 * hang +
-            s.billow * Math.sin(y * 2 + t * 2.6) * 0.28 * amp;
-          pos.setXYZ(v, x + Math.sin(t * 0.7 + s.phase) * 0.06 * amp, y, z);
+          // framed prints stay rigid and swing gently from the rod like a pendulum
+          const swing = Math.sin(t * 0.9 + s.phase) * 0.04 + s.billow * Math.sin(t * 2.4) * 0.07;
+          pos.setXYZ(v, x * Math.cos(swing * 0.3) - y * Math.sin(swing), y * Math.cos(swing) + x * Math.sin(swing * 0.3), -y * swing * 0.6);
         }
         pos.needsUpdate = true;
         s.mesh.geometry.computeVertexNormals();

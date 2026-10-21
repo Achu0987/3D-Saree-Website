@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Lenis from "lenis";
 import SilkCanvas from "./SilkCanvas";
 import HangingSilk from "./HangingSilk";
-import DrapeStudio from "./DrapeStudio";
 import { asset, formatPrice, imageCredits, sarees, silkRoom, store, weaves } from "@/data/catalog";
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -59,7 +58,6 @@ export default function Store() {
   const ringRef = useRef(null);
   const ringSecRef = useRef(null);
   const roomRef = useRef(null);
-  const studioApi = useRef(null);
   const lenisRef = useRef(null);
   const { bag, add, setQty } = useBag();
   const [bagOpen, setBagOpen] = useState(false);
@@ -88,10 +86,6 @@ export default function Store() {
     lenisRef.current ? lenisRef.current.scrollTo(el, { duration: 1.6 }) : el.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const seeOnModel = (id) => {
-    studioApi.current?.choose(id);
-    goTo("#studio");
-  };
 
   // ---------- scroll: smooth scrolling, hero progress, 3D ring, silk room, nav, parallax ----------
   useEffect(() => {
@@ -179,7 +173,6 @@ export default function Store() {
         </a>
         <nav className="nav__links">
           <a href="#collection" onClick={(e) => (e.preventDefault(), goTo("#collection"))}>Collection</a>
-          <a href="#studio" onClick={(e) => (e.preventDefault(), goTo("#studio"))}>Drape studio</a>
           <a href="#silkroom" onClick={(e) => (e.preventDefault(), goTo("#silkroom"))}>Silk room</a>
           <a href="#craft" onClick={(e) => (e.preventDefault(), goTo("#craft"))}>Craft</a>
         </nav>
@@ -205,10 +198,10 @@ export default function Store() {
                 <em>of light.</em>
               </span>
             </h1>
-            <p className="hero__sub">Kanjivaram, Banarasi, Paithani and more, woven by hand. Scroll to unfold the drape, then watch every saree come alive on our model.</p>
+            <p className="hero__sub">Kanjivaram, Banarasi, Paithani and more, woven by hand. Scroll to unfold the drape, then walk through our gallery of real silks.</p>
             <div className="hero__cta">
               <button type="button" className="btn btn--dark" onClick={() => goTo("#collection")}>Explore the collection</button>
-              <button type="button" className="btn btn--line" onClick={() => goTo("#studio")}>See it draped</button>
+              <button type="button" className="btn btn--line" onClick={() => goTo("#silkroom")}>Visit the silk room</button>
             </div>
             <div className="weaves">
               <span className="weaves__label">Choose the weave</span>
@@ -273,7 +266,6 @@ export default function Store() {
                     <span className="ring__price">{formatPrice(s.price)}</span>
                     <div className="ring__actions">
                       <button type="button" onClick={() => addToBag(s.id)}>Add to bag</button>
-                      <button type="button" onClick={() => seeOnModel(s.id)}>On model</button>
                     </div>
                   </div>
                 </article>
@@ -294,8 +286,6 @@ export default function Store() {
 
       <Ornament />
 
-      {/* ===== drape studio: our model in every saree ===== */}
-      <DrapeStudio ref={studioApi} onAdd={addToBag} />
 
       <Ornament />
 
@@ -305,8 +295,8 @@ export default function Store() {
           <HangingSilk fabrics={silkRoom} progress={roomProgress} onFocus={setRoomFocus} />
           <div className="silkroom__head">
             <p className="eyebrow reveal">The silk room</p>
-            <Split lines={["Walk past", <em key="e">the looms.</em>]} />
-            <p className="silkroom__hint reveal">Scroll to stroll the row. Hover a fabric and it lifts in the breeze.</p>
+            <Split lines={["A gallery of", <em key="e">real silks.</em>]} />
+            <p className="silkroom__hint reveal">Real sarees, real photographs. Scroll to stroll the gallery; hover a frame and it sways.</p>
           </div>
           <div className="silkroom__now">
             <span className="silkroom__idx">
@@ -344,7 +334,6 @@ export default function Store() {
           <div className="feature__buy reveal">
             <span className="feature__price">{formatPrice(featured.price)}</span>
             <button type="button" className="btn btn--dark" onClick={() => addToBag(featured.id)}>Add to bag</button>
-            <button type="button" className="btn btn--line" onClick={() => seeOnModel(featured.id)}>See it on model</button>
           </div>
         </div>
       </section>
@@ -402,7 +391,7 @@ export default function Store() {
                 {i < imageCredits.length - 1 ? ", " : ". "}
               </span>
             ))}
-            Model looks, hanging sarees and hero fabrics are AI-generated.
+            Hero fabrics are AI-generated.
           </p>
         </div>
       </footer>
