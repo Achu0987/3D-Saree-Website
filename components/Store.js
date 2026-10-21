@@ -3,21 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Lenis from "lenis";
 import SilkCanvas from "./SilkCanvas";
-import { asset, formatPrice, imageCredits, isStaticSite, sarees, store, weaves } from "@/data/catalog";
+import HangingSilk from "./HangingSilk";
+import { asset, formatPrice, imageCredits, sarees, silkRoom, store, weaves } from "@/data/catalog";
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const FEATURED = "purple";
-
-// shrink big phone photos before upload (faster, and the model only needs ~1.5k px)
-async function preparePhoto(file) {
-  const img = await createImageBitmap(file);
-  const scale = Math.min(1, 1536 / Math.max(img.width, img.height));
-  const c = document.createElement("canvas");
-  c.width = Math.round(img.width * scale);
-  c.height = Math.round(img.height * scale);
-  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-  return new Promise((r) => c.toBlob((b) => r(b), "image/jpeg", 0.92));
-}
+const LOOK_MS = 3800; // auto-play speed in the drape studio
+const MARQUEE = ["Kanjivaram", "Banarasi", "Paithani", "Tissue silk", "Organza", "Jamdani", "Soft silk", "Pure zari"];
 
 function useBag() {
   const [bag, setBag] = useState([]);
@@ -37,35 +29,55 @@ function useBag() {
   return { bag, add, setQty };
 }
 
+// heading whose lines rise in one after another
+function Split({ lines, as: Tag = "h2", className = "h2" }) {
+  return (
+    <Tag className={`${className} split reveal`}>
+      {lines.map((l, i) => (
+        <span key={i} className="split__line">
+          <span style={{ "--i": i }}>{l}</span>
+        </span>
+      ))}
+    </Tag>
+  );
+}
+
+function Ornament() {
+  return (
+    <div className="ornament reveal" aria-hidden>
+      <span />
+      <i />
+      <span />
+    </div>
+  );
+}
+
 export default function Store() {
   const heroProgress = useRef(0);
+  const roomProgress = useRef(0);
   const heroRef = useRef(null);
   const ringRef = useRef(null);
   const ringSecRef = useRef(null);
+  const roomRef = useRef(null);
+  const studioRef = useRef(null);
   const lenisRef = useRef(null);
   const { bag, add, setQty } = useBag();
   const [bagOpen, setBagOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [active, setActive] = useState(0);
   const [weave, setWeave] = useState(weaves[0]);
+  const [navHidden, setNavHidden] = useState(false);
+  const [navSolid, setNavSolid] = useState(false);
 
-  // try-on state
-  const [photo, setPhoto] = useState(null); // { blob, url }
-  const [pick, setPick] = useState(FEATURED);
-  const [status, setStatus] = useState("idle"); // idle | working | done | error
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState("");
-  const [split, setSplit] = useState(50);
-  const [elapsed, setElapsed] = useState(0);
-  const [tryOnReady, setTryOnReady] = useState(false);
+  // drape studio
+  const [look, setLook] = useState(0);
+  const [prevLook, setPrevLook] = useState(-1);
+  const [autoPlay, setAutoPlay] = useState(true);
+  const [studioInView, setStudioInView] = useState(false);
+  const resumeTimer = useRef(null);
 
-  useEffect(() => {
-    if (isStaticSite) return; // static hosting has no try-on server
-    fetch("/api/try-on")
-      .then((r) => r.json())
-      .then((j) => setTryOnReady(Boolean(j.enabled)))
-      .catch(() => {});
-  }, []);
+  // silk room
+  const [roomFocus, setRoomFocus] = useState(0);
 
   const count = bag.reduce((n, x) => n + x.qty, 0);
   const total = bag.reduce((n, x) => n + x.qty * (sarees.find((s) => s.id === x.id)?.price || 0), 0);
@@ -82,25 +94,59 @@ export default function Store() {
     lenisRef.current ? lenisRef.current.scrollTo(el, { duration: 1.6 }) : el.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const tryOn = (id) => {
-    setPick(id);
-    goTo("#tryon");
+  const showLook = useCallback((i) => {
+    setLook((cur) => {
+      if (cur !== i) setPrevLook(cur);
+      return i;
+    });
+  }, []);
+
+  // picking a saree pauses auto-play for a while, then it carries on by itself
+  const pickLook = (i) => {
+    showLook(i);
+    setAutoPlay(false);
+    clearTimeout(resumeTimer.current);
+    resumeTimer.current = setTimeout(() => setAutoPlay(true), 12000);
   };
 
-  // ---------- scroll: smooth scrolling, hero progress, 3D ring ----------
+  const seeOnModel = (id) => {
+    pickLook(sarees.findIndex((s) => s.id === id));
+    goTo("#studio");
+  };
+
+  // auto-play the looks while the studio is on screen
+  useEffect(() => {
+    if (!autoPlay || !studioInView) return;
+    const t = setTimeout(() => showLook((look + 1) % sarees.length), LOOK_MS);
+    return () => clearTimeout(t);
+  }, [autoPlay, studioInView, look, showLook]);
+
+  useEffect(() => () => clearTimeout(resumeTimer.current), []);
+
+  // ---------- scroll: smooth scrolling, hero progress, 3D ring, silk room, nav, parallax ----------
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const lenis = reduce ? null : new Lenis({ lerp: 0.085 });
     lenisRef.current = lenis;
     const cards = [...ringRef.current.querySelectorAll(".ring__card")];
+    const parallax = [...document.querySelectorAll("[data-parallax]")];
     const n = cards.length;
     const step = 360 / n;
     let raf;
     let lastActive = -1;
+    let lastY = window.scrollY;
     const tick = (now) => {
       raf = requestAnimationFrame(tick);
       lenis?.raf(now);
       const vh = window.innerHeight;
+      const y = window.scrollY;
+
+      // nav: tucks away while scrolling down, returns on the way up
+      if (Math.abs(y - lastY) > 4) {
+        setNavHidden(y > lastY && y > vh * 0.6);
+        setNavSolid(y > 40);
+        lastY = y;
+      }
 
       const h = heroRef.current.getBoundingClientRect();
       heroProgress.current = clamp(-h.top / (h.height - vh));
@@ -112,7 +158,7 @@ export default function Store() {
       ringRef.current.style.transform = `translateZ(calc(var(--radius) * -1)) rotateY(${angle}deg)`;
       cards.forEach((c, i) => {
         // how far this card is from facing the viewer (0 = front)
-        let d = (((i * step + angle) % 360) + 540) % 360 - 180;
+        const d = ((((i * step + angle) % 360) + 540) % 360) - 180;
         const f = 1 - Math.min(1, Math.abs(d) / 90);
         c.style.opacity = (0.15 + f * 0.85).toFixed(3);
         c.style.filter = `saturate(${0.4 + f * 0.6}) brightness(${0.75 + f * 0.25})`;
@@ -124,84 +170,58 @@ export default function Store() {
         setActive(cur);
       }
       ringSecRef.current.style.setProperty("--rp", rp.toFixed(4));
+
+      const rr = roomRef.current.getBoundingClientRect();
+      roomProgress.current = clamp(-rr.top / (rr.height - vh));
+      roomRef.current.style.setProperty("--rp", roomProgress.current.toFixed(4));
+
+      parallax.forEach((el) => {
+        const b = el.parentElement.getBoundingClientRect();
+        const off = (b.top + b.height / 2 - vh / 2) / vh;
+        el.style.transform = `translate3d(0, ${(off * -60 * +el.dataset.parallax).toFixed(1)}px, 0) scale(1.12)`;
+      });
     };
     raf = requestAnimationFrame(tick);
 
     // reveal-on-scroll
-    const io = new IntersectionObserver(
-      (entries) => entries.forEach((e) => e.isIntersecting && e.target.classList.add("is-in")),
-      { threshold: 0.18 }
-    );
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => e.isIntersecting && e.target.classList.add("is-in")), {
+      threshold: 0.16,
+    });
     document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+
+    const studioIO = new IntersectionObserver(([e]) => setStudioInView(e.isIntersecting), { threshold: 0.35 });
+    studioIO.observe(studioRef.current);
 
     return () => {
       cancelAnimationFrame(raf);
       io.disconnect();
+      studioIO.disconnect();
       lenis?.destroy();
     };
   }, []);
 
-  // ---------- try-on ----------
-  const onFile = async (file) => {
-    if (!file || !file.type.startsWith("image/")) {
-      setError("Please choose a photo (JPG or PNG).");
-      return;
-    }
-    setError("");
-    setResult(null);
-    setStatus("idle");
-    const blob = await preparePhoto(file);
-    setPhoto((old) => {
-      if (old?.url) URL.revokeObjectURL(old.url);
-      return { blob, url: URL.createObjectURL(blob) };
-    });
-  };
-
-  const drape = async () => {
-    if (!photo) return setError("Upload a full-length photo first.");
-    setStatus("working");
-    setError("");
-    setResult(null);
-    const t0 = Date.now();
-    const timer = setInterval(() => setElapsed(Math.round((Date.now() - t0) / 1000)), 500);
-    try {
-      const fd = new FormData();
-      fd.append("person", photo.blob, "me.jpg");
-      fd.append("saree", pick);
-      const res = await fetch("/api/try-on", { method: "POST", body: fd });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || "Something went wrong.");
-      setResult(json.image);
-      setSplit(50);
-      setStatus("done");
-    } catch (e) {
-      setError(e.message);
-      setStatus("error");
-    } finally {
-      clearInterval(timer);
-      setElapsed(0);
-    }
-  };
-
   const featured = sarees.find((s) => s.id === FEATURED);
-  const picked = sarees.find((s) => s.id === pick);
+  const current = sarees[look];
 
   return (
     <div className="store">
       {/* ===== header ===== */}
-      <header className="nav">
+      <header className={`nav${navHidden ? " is-hidden" : ""}${navSolid ? " is-solid" : ""}`}>
         <a href="#" className="nav__logo" onClick={(e) => (e.preventDefault(), goTo("#top"))}>
           {store.name}
           <span>Handwoven sarees</span>
         </a>
         <nav className="nav__links">
           <a href="#collection" onClick={(e) => (e.preventDefault(), goTo("#collection"))}>Collection</a>
-          <a href="#featured" onClick={(e) => (e.preventDefault(), goTo("#featured"))}>Saree of the week</a>
-          <a href="#tryon" onClick={(e) => (e.preventDefault(), goTo("#tryon"))}>Virtual try-on</a>
+          <a href="#studio" onClick={(e) => (e.preventDefault(), goTo("#studio"))}>Drape studio</a>
+          <a href="#silkroom" onClick={(e) => (e.preventDefault(), goTo("#silkroom"))}>Silk room</a>
           <a href="#craft" onClick={(e) => (e.preventDefault(), goTo("#craft"))}>Craft</a>
         </nav>
         <button type="button" className="nav__bag" onClick={() => setBagOpen(true)}>
-          Bag <b>{count}</b>
+          Bag{" "}
+          <b key={count} className="nav__count">
+            {count}
+          </b>
         </button>
       </header>
 
@@ -219,30 +239,28 @@ export default function Store() {
                 <em>of light.</em>
               </span>
             </h1>
-            <p className="hero__sub">
-              Kanjivaram, Banarasi, Paithani and more, woven by hand. Scroll to unfold the drape, then see any saree on you with virtual try-on.
-            </p>
+            <p className="hero__sub">Kanjivaram, Banarasi, Paithani and more, woven by hand. Scroll to unfold the drape, then watch every saree come alive on our model.</p>
             <div className="hero__cta">
               <button type="button" className="btn btn--dark" onClick={() => goTo("#collection")}>Explore the collection</button>
-              <button type="button" className="btn btn--line" onClick={() => goTo("#tryon")}>Try it on you</button>
+              <button type="button" className="btn btn--line" onClick={() => goTo("#studio")}>See it draped</button>
             </div>
             <div className="weaves">
               <span className="weaves__label">Choose the weave</span>
               <div className="weaves__row">
-              <div className="weaves__dots">
-                {weaves.map((w) => (
-                  <button
-                    key={w.id}
-                    type="button"
-                    className={`weaves__dot${weave.id === w.id ? " is-on" : ""}`}
-                    style={{ backgroundImage: `url(${w.tex})` }}
-                    onClick={() => setWeave(w)}
-                    aria-label={w.name}
-                    title={w.name}
-                  />
-                ))}
-              </div>
-              <span className="weaves__name">{weave.name}</span>
+                <div className="weaves__dots">
+                  {weaves.map((w) => (
+                    <button
+                      key={w.id}
+                      type="button"
+                      className={`weaves__dot${weave.id === w.id ? " is-on" : ""}`}
+                      style={{ backgroundImage: `url(${w.tex})` }}
+                      onClick={() => setWeave(w)}
+                      aria-label={w.name}
+                      title={w.name}
+                    />
+                  ))}
+                </div>
+                <span key={weave.id} className="weaves__name">{weave.name}</span>
               </div>
             </div>
           </div>
@@ -251,20 +269,31 @@ export default function Store() {
             <span>Free shipping across India</span>
             <span>Pure silk · Pure zari</span>
           </div>
-          <div className="hero__scroll">Scroll</div>
         </div>
       </section>
+
+      {/* ===== moving band of weave names ===== */}
+      <div className="marquee" aria-hidden>
+        <div className="marquee__track">
+          {[0, 1].map((k) => (
+            <span key={k}>
+              {MARQUEE.map((m) => (
+                <span key={m} className="marquee__item">
+                  {m}
+                  <i>✦</i>
+                </span>
+              ))}
+            </span>
+          ))}
+        </div>
+      </div>
 
       {/* ===== collection: 3D ring ===== */}
       <section className="ring-sec" id="collection" ref={ringSecRef}>
         <div className="ring-sec__sticky">
           <div className="ring-sec__head">
-            <p className="eyebrow">The collection</p>
-            <h2 className="h2">
-              Turn the loom.
-              <br />
-              <em>Meet each weave.</em>
-            </h2>
+            <p className="eyebrow reveal">The collection</p>
+            <Split lines={["Turn the loom.", <em key="e">Meet each weave.</em>]} />
           </div>
           <div className="ring-stage">
             <div className="ring" ref={ringRef} style={{ "--n": sarees.length }}>
@@ -278,7 +307,7 @@ export default function Store() {
                     <span className="ring__price">{formatPrice(s.price)}</span>
                     <div className="ring__actions">
                       <button type="button" onClick={() => addToBag(s.id)}>Add to bag</button>
-                      <button type="button" onClick={() => tryOn(s.id)}>Try on</button>
+                      <button type="button" onClick={() => seeOnModel(s.id)}>On model</button>
                     </div>
                   </div>
                 </article>
@@ -290,150 +319,131 @@ export default function Store() {
               {String(active + 1).padStart(2, "0")} <i>/ {sarees.length}</i>
             </span>
             <span className="ring-sec__now">{sarees[active]?.region}</span>
-            <span className="ring-sec__bar"><i /></span>
+            <span className="ring-sec__bar">
+              <i />
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <Ornament />
+
+      {/* ===== drape studio: the same model in every saree ===== */}
+      <section className="studio" id="studio" ref={studioRef}>
+        <div className="studio__copy">
+          <p className="eyebrow reveal">Drape studio</p>
+          <Split lines={["Pick a saree.", <em key="e">See it draped.</em>]} />
+          <p className="studio__lead reveal">Every weave, worn by our model in the same light, so you can compare true colour, border and fall. It plays by itself; tap any saree to take over.</p>
+
+          <div className="studio__rail reveal">
+            {sarees.map((s, i) => (
+              <button key={s.id} type="button" className={`chip${look === i ? " is-on" : ""}`} onClick={() => pickLook(i)} title={s.name}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={asset(`/sarees/${s.id}.webp`)} alt="" loading="lazy" />
+                <span>{s.name}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="studio__controls reveal">
+            <button type="button" className="studio__play" onClick={() => setAutoPlay((a) => !a)}>
+              {autoPlay ? "❚❚ Pause" : "▶ Play"}
+            </button>
+            <span className="studio__timer">
+              <i key={`${look}-${autoPlay}-${studioInView}`} className={autoPlay && studioInView ? "is-running" : ""} style={{ "--ms": `${LOOK_MS}ms` }} />
+            </span>
+            <span className="studio__count">
+              {String(look + 1).padStart(2, "0")} / {sarees.length}
+            </span>
+          </div>
+        </div>
+
+        <div className="studio__stage reveal">
+          <div className="studio__frame">
+            {sarees.map((s, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={s.id}
+                src={asset(`/model/${s.id}.webp`)}
+                alt={i === look ? `Our model wearing the ${s.name}` : ""}
+                loading={i < 2 ? "eager" : "lazy"}
+                className={`look${i === look ? " is-on" : ""}${i === prevLook ? " is-prev" : ""}`}
+              />
+            ))}
+            <span key={look} className="studio__sheen" aria-hidden />
+          </div>
+          <div key={current.id} className="studio__card">
+            <span className="studio__weave">
+              {current.weave} · {current.region}
+            </span>
+            <b>{current.name}</b>
+            <div className="studio__buy">
+              <span>{formatPrice(current.price)}</span>
+              <button type="button" className="btn btn--dark btn--sm" onClick={() => addToBag(current.id)}>Add to bag</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <Ornament />
+
+      {/* ===== silk room: hanging fabrics in 3D ===== */}
+      <section className="silkroom" id="silkroom" ref={roomRef}>
+        <div className="silkroom__sticky">
+          <HangingSilk fabrics={silkRoom} progress={roomProgress} onFocus={setRoomFocus} />
+          <div className="silkroom__head">
+            <p className="eyebrow reveal">The silk room</p>
+            <Split lines={["Walk past", <em key="e">the looms.</em>]} />
+            <p className="silkroom__hint reveal">Scroll to stroll the row. Hover a fabric and it lifts in the breeze.</p>
+          </div>
+          <div className="silkroom__now">
+            <span className="silkroom__idx">
+              {String(roomFocus + 1).padStart(2, "0")} <i>/ {String(silkRoom.length).padStart(2, "0")}</i>
+            </span>
+            <b key={roomFocus}>{silkRoom[roomFocus].name}</b>
+            <span className="silkroom__bar">
+              <i />
+            </span>
           </div>
         </div>
       </section>
 
       {/* ===== saree of the week ===== */}
       <section className="feature" id="featured">
-        <div className="feature__img reveal">
+        <div className="feature__img reveal reveal--img">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={asset(`/sarees/${featured.id}.webp`)} alt={featured.name} />
+          <img src={asset(`/sarees/${featured.id}.webp`)} alt={featured.name} data-parallax="1" />
         </div>
-        <div className="feature__copy reveal">
-          <p className="eyebrow">Saree of the week</p>
-          <h2 className="h2">{featured.name}</h2>
-          <p className="feature__note">{featured.note}</p>
-          <dl className="feature__specs">
-            <div><dt>Weave</dt><dd>{featured.weave}</dd></div>
-            <div><dt>From</dt><dd>{featured.region}</dd></div>
-            <div><dt>Length</dt><dd>6.3 m with blouse piece</dd></div>
-            <div><dt>Care</dt><dd>Dry clean only</dd></div>
+        <div className="feature__copy">
+          <p className="eyebrow reveal">Saree of the week</p>
+          <Split lines={[featured.name]} />
+          <p className="feature__note reveal">{featured.note}</p>
+          <dl className="feature__specs reveal stagger">
+            <div style={{ "--i": 0 }}><dt>Weave</dt><dd>{featured.weave}</dd></div>
+            <div style={{ "--i": 1 }}><dt>From</dt><dd>{featured.region}</dd></div>
+            <div style={{ "--i": 2 }}><dt>Length</dt><dd>6.3 m with blouse piece</dd></div>
+            <div style={{ "--i": 3 }}><dt>Care</dt><dd>Dry clean only</dd></div>
           </dl>
-          <div className="feature__colors">
+          <div className="feature__colors reveal">
             {featured.colors.map((c) => (
               <span key={c} style={{ background: c }} />
             ))}
           </div>
-          <div className="feature__buy">
+          <div className="feature__buy reveal">
             <span className="feature__price">{formatPrice(featured.price)}</span>
             <button type="button" className="btn btn--dark" onClick={() => addToBag(featured.id)}>Add to bag</button>
-            <button type="button" className="btn btn--line" onClick={() => tryOn(featured.id)}>See it on me</button>
+            <button type="button" className="btn btn--line" onClick={() => seeOnModel(featured.id)}>See it on model</button>
           </div>
         </div>
       </section>
 
-      {/* ===== virtual try-on ===== */}
-      <section className="tryon" id="tryon">
-        <div className="tryon__head reveal">
-          <p className="eyebrow">Virtual drape studio</p>
-          <h2 className="h2">
-            See it on <em>you</em>,<br />before it ships.
-          </h2>
-          <p className="tryon__lead">Upload one full-length photo, choose a saree, and we drape that exact weave on you: same face, same pose, real pleats.</p>
-        </div>
-
-        <div className="tryon__grid">
-          {/* 1. photo */}
-          <div className="panel reveal">
-            <span className="panel__step">01 · Your photo</span>
-            <label
-              className={`drop${photo ? " has-photo" : ""}`}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                onFile(e.dataTransfer.files?.[0]);
-              }}
-            >
-              <input type="file" accept="image/*" onChange={(e) => onFile(e.target.files?.[0])} />
-              {photo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={photo.url} alt="Your uploaded photo" />
-              ) : (
-                <span className="drop__hint">
-                  <b>Drop a full-length photo</b>
-                  or click to upload
-                  <small>Stand straight, facing the camera, head to toe in frame, good light.</small>
-                </span>
-              )}
-            </label>
-          </div>
-
-          {/* 2. saree */}
-          <div className="panel reveal">
-            <span className="panel__step">02 · Choose a saree</span>
-            <div className="picker">
-              {sarees.map((s) => (
-                <button key={s.id} type="button" className={`picker__item${pick === s.id ? " is-on" : ""}`} onClick={() => setPick(s.id)} title={s.name}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={asset(`/sarees/${s.id}.webp`)} alt={s.name} loading="lazy" />
-                </button>
-              ))}
-            </div>
-            <p className="picker__name">
-              {picked.name} · <span>{formatPrice(picked.price)}</span>
-            </p>
-            <button type="button" className="btn btn--dark btn--block" disabled={status === "working" || !tryOnReady} onClick={drape}>
-              {!tryOnReady ? "Launching soon" : status === "working" ? `Draping… ${elapsed}s` : "Drape it on me"}
-            </button>
-            {!tryOnReady && <p className="tryon__soon">Virtual try-on is being switched on. Check back very soon.</p>}
-            {error && <p className="tryon__error">{error}</p>}
-            <p className="tryon__privacy">Your photo is sent to our AI partner only to create this preview and is not stored by us.</p>
-          </div>
-
-          {/* 3. result */}
-          <div className="panel panel--result reveal">
-            <span className="panel__step">03 · Your drape</span>
-            <div className={`result${status === "working" ? " is-working" : ""}`}>
-              {result && photo ? (
-                <div className="compare" style={{ "--split": `${split}%` }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={result} alt={`You wearing the ${picked.name}`} />
-                  <div className="compare__before">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photo.url} alt="Your original photo" />
-                  </div>
-                  <input type="range" min="0" max="100" value={split} onChange={(e) => setSplit(+e.target.value)} aria-label="Compare before and after" />
-                  <span className="compare__tag compare__tag--l">Before</span>
-                  <span className="compare__tag compare__tag--r">After</span>
-                </div>
-              ) : (
-                <div className="result__empty">
-                  {status === "working" ? (
-                    <>
-                      <span className="loom" />
-                      <b>Weaving your drape</b>
-                      <small>This usually takes 30 to 60 seconds.</small>
-                    </>
-                  ) : (
-                    <>
-                      <b>Your preview appears here</b>
-                      <small>Drag the slider to compare before and after.</small>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-            {result && (
-              <div className="result__actions">
-                <a className="btn btn--line" href={result} download={`harsha-${picked.id}-tryon.png`}>Download</a>
-                <button type="button" className="btn btn--dark" onClick={() => addToBag(picked.id)}>Add this saree</button>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+      <Ornament />
 
       {/* ===== craft ===== */}
       <section className="craft" id="craft">
-        <div className="craft__head reveal">
-          <p className="eyebrow">The craft</p>
-          <h2 className="h2">
-            Every saree takes
-            <br />
-            <em>weeks, not minutes.</em>
-          </h2>
+        <div className="craft__head">
+          <p className="eyebrow reveal">The craft</p>
+          <Split lines={["Every saree takes", <em key="e">weeks, not minutes.</em>]} />
         </div>
         <div className="craft__rows">
           {[
@@ -441,10 +451,12 @@ export default function Store() {
             { img: "zari-detail", k: "02", t: "Pure zari, real gold", d: "Silver thread, gilded in gold and woven into borders that last a lifetime." },
             { img: "silk-stack", k: "03", t: "Finished by hand", d: "Every saree is checked, steamed and folded by hand before it reaches you." },
           ].map((c, i) => (
-            <article key={c.k} className={`craft__row reveal${i % 2 ? " is-flip" : ""}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={asset(`/craft/${c.img}.webp`)} alt="" loading="lazy" />
-              <div>
+            <article key={c.k} className={`craft__row${i % 2 ? " is-flip" : ""}`}>
+              <div className="craft__img reveal reveal--img">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={asset(`/craft/${c.img}.webp`)} alt="" loading="lazy" data-parallax="0.7" />
+              </div>
+              <div className="craft__text reveal">
                 <span className="craft__k">{c.k}</span>
                 <h3>{c.t}</h3>
                 <p>{c.d}</p>
@@ -456,12 +468,12 @@ export default function Store() {
 
       {/* ===== footer ===== */}
       <footer className="foot">
-        <div className="foot__brand">
+        <div className="foot__brand reveal">
           <span className="foot__logo">{store.name}</span>
           <p>{store.tagline}</p>
           <a href={`mailto:${store.email}`}>{store.email}</a>
         </div>
-        <div className="foot__credits">
+        <div className="foot__credits reveal">
           <b>Photography</b>
           <p>
             Saree photos from Unsplash:{" "}
@@ -475,9 +487,10 @@ export default function Store() {
             {imageCredits.map((c, i) => (
               <span key={c.url}>
                 <a href={c.url} target="_blank" rel="noreferrer">{c.by}</a>
-                {i < imageCredits.length - 1 ? ", " : "."}
+                {i < imageCredits.length - 1 ? ", " : ". "}
               </span>
             ))}
+            Model looks and hero fabrics are AI-generated.
           </p>
         </div>
       </footer>

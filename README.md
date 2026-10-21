@@ -1,6 +1,12 @@
 # Harsha — 3D Saree Store
 
-A premium saree storefront built with Next.js and three.js: a live 3D silk drape in the hero, a scroll-driven 3D collection ring, a featured saree, a bag drawer, and an AI virtual try-on studio.
+A premium saree storefront built with Next.js and three.js:
+
+- **Hero** — a live 3D silk drape with a weave picker
+- **Collection** — a scroll-driven 3D ring of all 13 sarees
+- **Drape studio** — the same model shown in every saree; auto-plays, tap to choose
+- **Silk room** — saree fabrics hanging from a gold rod in 3D, swaying as you scroll and hover
+- Saree of the week, the craft story, and a bag drawer
 
 ## Run locally
 
@@ -11,27 +17,17 @@ npm run dev
 
 Open http://localhost:3000.
 
-## Virtual try-on
-
-Try-on needs a server and an OpenAI API key with credit:
-
-1. Copy `.env.local.example` to `.env.local` and set `OPENAI_API_KEY`.
-2. Restart `npm run dev`.
-
-`.env.local` is git-ignored — never commit your key.
-
 ## GitHub Pages
 
 `.github/workflows/deploy.yml` publishes a static build on every push to `main`
-(enable it once: **Settings → Pages → Source: GitHub Actions**).
-GitHub Pages has no server, so on the published site the try-on button shows "Launching soon".
-For live try-on, deploy to a host with server support (for example Vercel) and add `OPENAI_API_KEY` there.
+(one-time setup: **Settings → Pages → Source: GitHub Actions**).
 
 ## Editing content
 
-Products, prices, hero fabrics and credits live in `data/catalog.js`.
+Products, prices, hero fabrics, silk-room fabrics and credits live in `data/catalog.js`.
+Model looks are in `public/model/<saree-id>.webp`.
 
 ## Credits
 
 Saree, texture and craft photos are from Unsplash (free licence); photographers are credited in `data/catalog.js` and in the site footer.
-Hero drape fabrics are AI-generated flat-lay recreations.
+Hero fabrics and the drape-studio model looks are AI-generated.

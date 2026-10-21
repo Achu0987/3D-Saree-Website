@@ -3,9 +3,6 @@
 // Prefix for files in /public — empty locally, "/3D-Saree-Website" on GitHub Pages (set at build time).
 export const asset = (p) => `${process.env.NEXT_PUBLIC_BASE_PATH || ""}${p}`;
 
-// true for the GitHub Pages build: no server there, so the try-on API isn't available
-export const isStaticSite = process.env.NEXT_PUBLIC_STATIC_SITE === "true";
-
 export const store = {
   name: "Harsha",
   tagline: "Handwoven sarees, draped in light",
@@ -35,6 +32,15 @@ export const weaves = [
   { id: "redgold", name: "Red Gold Brocade Silk", tex: asset("/textures/silk-red-gold.jpg") },
   { id: "olive", name: "Olive Gold Tissue", tex: asset("/textures/silk-olive.jpg") },
   { id: "green", name: "Parrot Green Kanjivaram", tex: asset("/textures/silk-green.jpg") },
+];
+
+// The silk room: fabrics hanging in 3D, in walking order
+export const silkRoom = [
+  { name: "Red Gold Brocade Silk", tex: asset("/textures/silk-red-gold.jpg") },
+  { name: "Olive Gold Tissue", tex: asset("/textures/silk-olive.jpg") },
+  { name: "Parrot Green Kanjivaram", tex: asset("/textures/silk-green.jpg") },
+  { name: "Ikat Silk", tex: asset("/textures/ikat.jpg") },
+  { name: "Teal Satin Silk", tex: asset("/textures/satin-teal.jpg") },
 ];
 
 export const imageCredits = [
